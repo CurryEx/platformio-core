@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import click
 from time import sleep, time
 
 from platformio.exception import UserSideException
@@ -90,13 +91,17 @@ class LockFile:
 
     def acquire(self):
         elapsed = 0
+        time_cost = 0
         while elapsed < self.timeout:
             try:
                 return self._lock()
             except LockFileExists:
                 sleep(self.delay)
+                time_cost += self.delay
+                if time_cost > 60:
+                    click.echo("The time taken to acquire the file lock has exceeded the usual duration. Please check if another process (e.g., Python) is currently using the lockfile %s, or if there are network issues causing dependencies to still be downloading." % self._lock_path)
+                    time_cost = 0
                 elapsed += self.delay
-
         raise LockFileTimeoutError()
 
     def release(self):
